@@ -1,0 +1,17 @@
+{
+  "name": "modesta-editorial",
+  "version": "1.0.0",
+  "description": "Sitio web oficial de Modesta Editorial con catálogo de publicaciones y e-commerce integrado.",
+  "main": "index.html",
+  "scripts": {
+    "dev": "npx http-server ./ -p 3000"
+  },
+  "keywords": [
+    "editorial",
+    "modesta",
+    "libros",
+    "ecommerce"
+  ],
+  "author": "Antigravity",
+  "license": "ISC"
+}
