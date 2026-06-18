@@ -1306,6 +1306,10 @@ nav a:hover::after, nav a.active::after {
     background-color: #2e7d32;
 }
 
+.status-icon.failure {
+    background-color: #c62828;
+}
+
 .status-title {
     font-family: var(--font-serif);
     font-size: 2.2rem;

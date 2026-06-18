@@ -224,7 +224,51 @@
                                 <span id="summary-total" class="total-val">$0 ARS</span>
                             </div>
                         </div>
+            </div>
+        </section>
+
+        <!-- SECTION: CHECKOUT SUCCESS -->
+        <section id="checkout-success" class="page-section">
+            <div class="payment-status-screen">
+                <div class="status-icon success">
+                    <i class="fa-solid fa-check"></i>
+                </div>
+                <h3 class="status-title">¡Compra Completada!</h3>
+                <p class="status-desc" id="success-message">Tu pedido ha sido procesado de manera exitosa.</p>
+                
+                <div id="success-details-box" style="max-width: 600px; margin: 0 auto 2.5rem auto; background-color: var(--color-bg-alt); border: 1px solid var(--color-border); padding: 2rem; border-radius: 6px; text-align: left; font-size: 0.95rem; line-height: 1.6;">
+                    <div style="text-align: center; padding: 1rem 0;">
+                        <i class="fa-solid fa-circle-notch fa-spin" style="font-size: 2rem; color: var(--color-accent); margin-bottom: 1rem;"></i>
+                        <p>Confirmando el pago con la pasarela de cobro...</p>
                     </div>
+                </div>
+                
+                <button onclick="app.finalizePurchaseOrder()" class="btn btn-primary" style="padding: 0.9rem 2.5rem;">
+                    Volver a la tienda
+                </button>
+            </div>
+        </section>
+
+        <!-- SECTION: CHECKOUT FAILURE -->
+        <section id="checkout-failure" class="page-section">
+            <div class="payment-status-screen">
+                <div class="status-icon failure">
+                    <i class="fa-solid fa-xmark"></i>
+                </div>
+                <h3 class="status-title" style="color: #c62828;">Pago No Completado</h3>
+                <p class="status-desc">La transacción fue cancelada o no pudo procesarse.</p>
+                
+                <div style="max-width: 600px; margin: 0 auto 2.5rem auto; background-color: var(--color-bg-alt); border: 1px solid var(--color-border); padding: 2rem; border-radius: 6px; text-align: left; font-size: 0.95rem; line-height: 1.6;">
+                    <p style="margin-bottom: 1rem;"><strong>¿Qué sucedió?</strong></p>
+                    <p style="color: var(--color-text-muted); margin-bottom: 1rem;">
+                        No se ha realizado ningún cargo. Esto puede deberse a que cancelaste el proceso de pago, o la entidad emisora de tu tarjeta declinó la operación.
+                    </p>
+                    <p id="failure-details-text" style="color: var(--color-text-muted); font-size: 0.85rem; border-left: 3px solid #c62828; padding-left: 1rem; margin-top: 1rem;"></p>
+                </div>
+                
+                <div style="display: flex; justify-content: center; gap: 1rem;">
+                    <a href="#checkout" class="btn btn-primary" style="padding: 0.9rem 2.5rem;">Reintentar Pago</a>
+                    <a href="#catalogo" class="btn btn-secondary" style="padding: 0.9rem 2.5rem;">Ir al Catálogo</a>
                 </div>
             </div>
         </section>

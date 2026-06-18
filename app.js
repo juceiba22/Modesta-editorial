@@ -2,6 +2,11 @@
 // Implementa la SPA, el carrito, la simulación de pagos y las reseñas
 
 const app = {
+    // 0. SUPABASE CONFIGURATION
+    // Reemplazar con las credenciales de tu panel de Supabase
+    supabaseUrl: "https://YOUR_PROJECT_ID.supabase.co",
+    supabaseAnonKey: "YOUR_ANON_KEY",
+
     // 1. DATA STORES
     books: {
         posturas: {
@@ -117,6 +122,12 @@ const app = {
                 const bookId = hash.split('/')[1];
                 this.renderBookDetail(bookId);
                 document.getElementById('libro-detalle').classList.add('active');
+            } else if (hash.startsWith('#checkout/success')) {
+                this.handleCheckoutSuccess();
+                document.getElementById('checkout-success').classList.add('active');
+            } else if (hash.startsWith('#checkout/failure')) {
+                this.handleCheckoutFailure();
+                document.getElementById('checkout-failure').classList.add('active');
             } else if (hash === '#checkout') {
                 this.renderCheckout();
                 document.getElementById('checkout').classList.add('active');
@@ -616,143 +627,227 @@ const app = {
         const modalCard = document.getElementById('payment-modal-card');
         
         modal.classList.add('open');
+        modalCard.innerHTML = `
+            <div class="payment-status-screen">
+                <div style="margin: 2rem 0;">
+                    <i class="fa-solid fa-circle-notch fa-spin" style="font-size: 3.5rem; color: var(--color-accent)"></i>
+                </div>
+                <h4 style="font-family: var(--font-serif); font-size: 1.8rem; margin-bottom: 1rem;">Preparando tu Pago</h4>
+                <p style="color: var(--color-text-muted);">Por favor, espera un momento mientras te conectamos con la pasarela de pagos...</p>
+            </div>
+        `;
 
-        // Order Total calculation
-        let subtotal = 0;
-        this.cart.forEach(item => {
-            subtotal += (isArgentina ? item.price : item.priceUSD) * item.quantity;
+        const checkoutData = {
+            customer_name: document.getElementById('checkout-name').value,
+            customer_email: document.getElementById('checkout-email').value,
+            customer_phone: document.getElementById('checkout-phone').value,
+            shipping_address: document.getElementById('checkout-address').value,
+            shipping_city: document.getElementById('checkout-city').value,
+            shipping_state: document.getElementById('checkout-state').value,
+            shipping_zip: document.getElementById('checkout-zip').value,
+            shipping_country: countrySelect.value,
+            payment_method: isArgentina ? 'mercadopago' : 'paypal',
+            cart: this.cart.map(item => ({ id: item.id, quantity: item.quantity })),
+            site_url: `${window.location.protocol}//${window.location.host}${window.location.pathname}`
+        };
+
+        fetch(`${this.supabaseUrl}/functions/v1/checkout`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'apikey': this.supabaseAnonKey
+            },
+            body: JSON.stringify(checkoutData)
+        })
+        .then(res => {
+            if (!res.ok) {
+                return res.json().then(err => { throw new Error(err.error || 'Error en el servidor') });
+            }
+            return res.json();
+        })
+        .then(data => {
+            if (data.url) {
+                sessionStorage.setItem('last_order_id', data.order_id);
+                window.location.href = data.url;
+            } else {
+                throw new Error("No se recibió la URL de pago.");
+            }
+        })
+        .catch(err => {
+            console.error("Checkout error:", err);
+            modalCard.innerHTML = `
+                <div class="payment-status-screen">
+                    <div class="status-icon failure">
+                        <i class="fa-solid fa-xmark"></i>
+                    </div>
+                    <h3 class="status-title" style="color: #c62828;">Error en el Checkout</h3>
+                    <p class="status-desc">${err.message}</p>
+                    <button onclick="app.closePaymentModal()" class="btn btn-secondary" style="padding: 0.6rem 1.5rem;">
+                        Cerrar y Reintentar
+                    </button>
+                </div>
+            `;
         });
-        const shipping = isArgentina ? 3000 : 12;
-        const totalAmount = subtotal + shipping;
-        const currency = isArgentina ? 'ARS' : 'USD';
-
-        if (isArgentina) {
-            // Mercado Pago simulation
-            modalCard.innerHTML = `
-                <div class="payment-modal-header mercadopago">
-                    <h4>Mercado Pago - Pasarela de Simulación</h4>
-                    <button class="close-cart-btn" onclick="app.closePaymentModal()" style="color: white; font-size: 1.2rem;"><i class="fa-solid fa-xmark"></i></button>
-                </div>
-                <div class="payment-modal-body">
-                    <div style="text-align: center; margin-bottom: 2rem;">
-                        <div style="font-size: 0.95rem; color: var(--color-text-muted);">Monto a Transferir</div>
-                        <div style="font-size: 2.2rem; font-weight: 700; color: #009ee3;">$${totalAmount.toLocaleString('es-AR')} ARS</div>
-                    </div>
-                    <form id="sim-mp-form" onsubmit="event.preventDefault(); app.processPaymentSimulation('mp');">
-                        <div class="form-group" style="margin-bottom: 1.2rem;">
-                            <label>Número de Tarjeta</label>
-                            <input type="text" required pattern="[0-9]{16}" placeholder="4500 1234 5678 9012" maxlength="16">
-                        </div>
-                        <div class="form-group" style="margin-bottom: 1.2rem;">
-                            <label>Nombre del Titular (como figura en la tarjeta)</label>
-                            <input type="text" required placeholder="JUAN PEREZ">
-                        </div>
-                        <div class="sim-input-row" style="margin-bottom: 1.5rem;">
-                            <div class="form-group">
-                                <label>Vencimiento</label>
-                                <input type="text" required pattern="(0[1-9]|1[0-2])\\/?([0-9]{2})" placeholder="MM/AA" maxlength="5">
-                            </div>
-                            <div class="form-group">
-                                <label>Código de Seguridad</label>
-                                <input type="text" required pattern="[0-9]{3,4}" placeholder="CVV" maxlength="4">
-                            </div>
-                        </div>
-                        <button type="submit" class="btn btn-primary" style="width: 100%; background-color: #009ee3; color: white; border: none; font-size: 1rem; padding: 1rem;">
-                            <i class="fa-solid fa-lock"></i> Pagar de forma segura
-                        </button>
-                    </form>
-                </div>
-            `;
-        } else {
-            // PayPal simulation
-            modalCard.innerHTML = `
-                <div class="payment-modal-header paypal">
-                    <h4>PayPal - Simulación de Compra</h4>
-                    <button class="close-cart-btn" onclick="app.closePaymentModal()" style="color: white; font-size: 1.2rem;"><i class="fa-solid fa-xmark"></i></button>
-                </div>
-                <div class="payment-modal-body">
-                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 2.5rem; background-color: #f6f8fa; padding: 1.2rem; border-radius: 6px; border: 1px solid var(--color-border);">
-                        <span style="font-size: 0.95rem; font-weight: 500;">Modesta Editorial Store</span>
-                        <span style="font-size: 1.35rem; font-weight: 700; color: #003087;">$${totalAmount.toLocaleString('en-US')} USD</span>
-                    </div>
-                    
-                    <form id="sim-paypal-form" onsubmit="event.preventDefault(); app.processPaymentSimulation('paypal');">
-                        <div style="text-align: center; margin-bottom: 1.5rem;">
-                            <p style="font-size: 0.95rem; font-weight: 600; margin-bottom: 0.5rem;">Pagar con Cuenta de PayPal</p>
-                        </div>
-                        <div class="form-group" style="margin-bottom: 1.2rem;">
-                            <label>Correo Electrónico de PayPal</label>
-                            <input type="email" required placeholder="tu_correo@paypal.com">
-                        </div>
-                        <div class="form-group" style="margin-bottom: 2rem;">
-                            <label>Contraseña de PayPal</label>
-                            <input type="password" required placeholder="••••••••">
-                        </div>
-                        
-                        <button type="submit" class="btn btn-primary" style="width: 100%; background-color: #0079c1; color: white; border: none; font-size: 1rem; padding: 1rem; margin-bottom: 1rem;">
-                            Iniciar Sesión y Pagar
-                        </button>
-                    </form>
-                </div>
-            `;
-        }
     },
 
     closePaymentModal() {
         document.getElementById('payment-modal').classList.remove('open');
     },
 
-    processPaymentSimulation(gateway) {
-        const card = document.getElementById('payment-modal-card');
-        
-        // Show spinner / processing animation
-        card.innerHTML = `
-            <div class="payment-status-screen">
-                <div style="margin: 2rem 0;">
-                    <i class="fa-solid fa-circle-notch fa-spin" style="font-size: 3.5rem; color: var(--color-accent)"></i>
-                </div>
-                <h4 style="font-family: var(--font-serif); font-size: 1.8rem; margin-bottom: 1rem;">Procesando su Pago</h4>
-                <p style="color: var(--color-text-muted);">Por favor, no cierre esta ventana mientras validamos la transacción...</p>
-            </div>
-        `;
+    getHashParams() {
+        const hash = window.location.hash;
+        const qPos = hash.indexOf('?');
+        if (qPos === -1) return {};
+        const search = hash.substring(qPos + 1);
+        const params = {};
+        search.split('&').forEach(pair => {
+            const [key, val] = pair.split('=');
+            if (key) params[decodeURIComponent(key)] = decodeURIComponent(val || '');
+        });
+        return params;
+    },
 
-        // Wait 2.5 seconds, then show success screen
-        setTimeout(() => {
-            const customerName = document.getElementById('checkout-name').value;
-            const orderNumber = Math.floor(100000 + Math.random() * 900000);
-            
-            // Save order history in localStorage
-            const orders = JSON.parse(localStorage.getItem('modesta_orders') || '[]');
-            orders.push({
-                orderNumber,
-                customerName,
-                date: new Date().toLocaleDateString('es-AR'),
-                total: document.getElementById('summary-total').innerText,
-                items: this.cart.map(i => ({ title: i.title, qty: i.quantity }))
-            });
-            localStorage.setItem('modesta_orders', JSON.stringify(orders));
+    handleCheckoutSuccess() {
+        const successBox = document.getElementById('success-details-box');
+        const params = this.getHashParams();
+        const gateway = params.gateway;
+        const orderId = params.order_id || sessionStorage.getItem('last_order_id');
+        const token = params.token;
 
-            // Success screen content
-            card.innerHTML = `
-                <div class="payment-status-screen">
-                    <div class="status-icon success">
-                        <i class="fa-solid fa-check"></i>
-                    </div>
-                    <h3 class="status-title">¡Compra Completada!</h3>
-                    <p class="status-desc">Muchas gracias, <strong>${customerName}</strong>. Tu pedido ha sido procesado de manera exitosa.</p>
-                    
-                    <div style="background-color: var(--color-bg-alt); border: 1px solid var(--color-border); padding: 1.5rem; border-radius: 6px; text-align: left; margin-bottom: 2.5rem; font-size: 0.9rem;">
-                        <div style="margin-bottom: 0.5rem;"><strong>Número de Pedido:</strong> #${orderNumber}</div>
-                        <div style="margin-bottom: 0.5rem;"><strong>Transacción:</strong> Aprobada por ${gateway === 'mp' ? 'Mercado Pago' : 'PayPal'}</div>
-                        <div><strong>Detalle de Envío:</strong> Correo de seguimiento prioritario será enviado a tu e-mail.</div>
-                    </div>
-                    
-                    <button onclick="app.finalizePurchaseOrder()" class="btn btn-primary" style="padding: 0.9rem 2.5rem;">
-                        Volver a la tienda
-                    </button>
+        if (!orderId) {
+            successBox.innerHTML = `
+                <p style="color: #c62828;"><strong>Error:</strong> No se pudo recuperar el identificador del pedido.</p>
+                <p>Si realizaste el pago, por favor contáctanos con tu comprobante.</p>
+            `;
+            return;
+        }
+
+        if (gateway === 'paypal' && token) {
+            successBox.innerHTML = `
+                <div style="text-align: center; padding: 1rem 0;">
+                    <i class="fa-solid fa-circle-notch fa-spin" style="font-size: 2rem; color: #0070ba; margin-bottom: 1rem;"></i>
+                    <p>Capturando fondos y verificando tu pago con PayPal...</p>
                 </div>
             `;
-        }, 2500);
+
+            fetch(`${this.supabaseUrl}/functions/v1/paypal-capture`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'apikey': this.supabaseAnonKey
+                },
+                body: JSON.stringify({
+                    paypal_order_id: token,
+                    order_id: orderId
+                })
+            })
+            .then(res => {
+                if (!res.ok) {
+                    return res.json().then(err => { throw new Error(err.error || 'Error al procesar la captura') });
+                }
+                return res.json();
+            })
+            .then(data => {
+                this.cart = [];
+                this.saveCart();
+                this.updateCartUI();
+
+                successBox.innerHTML = `
+                    <div style="margin-bottom: 0.5rem;"><strong>Número de Pedido:</strong> #${orderId}</div>
+                    <div style="margin-bottom: 0.5rem;"><strong>Transacción:</strong> Aprobada y capturada por PayPal</div>
+                    <div><strong>Detalle de Envío:</strong> Enviaremos el código de seguimiento prioritario a tu e-mail.</div>
+                `;
+                sessionStorage.removeItem('last_order_id');
+            })
+            .catch(err => {
+                console.error("PayPal Capture error:", err);
+                successBox.innerHTML = `
+                    <p style="color: #c62828;"><strong>Error en captura de PayPal:</strong> ${err.message}</p>
+                    <p>Por favor, contáctanos si se te ha descontado saldo pero no ves la orden como completada.</p>
+                `;
+            });
+        } else if (gateway === 'mercadopago') {
+            successBox.innerHTML = `
+                <div style="text-align: center; padding: 1rem 0;">
+                    <i class="fa-solid fa-circle-notch fa-spin" style="font-size: 2rem; color: #009ee3; margin-bottom: 1rem;"></i>
+                    <p>Verificando acreditación de pago de Mercado Pago...</p>
+                </div>
+            `;
+
+            let attempts = 0;
+            const maxAttempts = 6;
+
+            const checkStatus = () => {
+                attempts++;
+                fetch(`${this.supabaseUrl}/rest/v1/orders?id=eq.${orderId}&select=status`, {
+                    headers: {
+                        'apikey': this.supabaseAnonKey,
+                        'Authorization': `Bearer ${this.supabaseAnonKey}`
+                    }
+                })
+                .then(res => res.json())
+                .then(orders => {
+                    if (orders && orders.length > 0) {
+                        const order = orders[0];
+                        if (order.status === 'paid') {
+                            this.cart = [];
+                            this.saveCart();
+                            this.updateCartUI();
+
+                            successBox.innerHTML = `
+                                <div style="margin-bottom: 0.5rem;"><strong>Número de Pedido:</strong> #${orderId}</div>
+                                <div style="margin-bottom: 0.5rem;"><strong>Transacción:</strong> Acreditada por Mercado Pago</div>
+                                <div><strong>Detalle de Envío:</strong> El correo prioritario de envío nacional certificado será enviado a tu e-mail.</div>
+                            `;
+                            sessionStorage.removeItem('last_order_id');
+                        } else if (attempts < maxAttempts) {
+                            setTimeout(checkStatus, 2000);
+                        } else {
+                            this.cart = [];
+                            this.saveCart();
+                            this.updateCartUI();
+                            
+                            successBox.innerHTML = `
+                                <div style="margin-bottom: 0.5rem;"><strong>Número de Pedido:</strong> #${orderId}</div>
+                                <div style="margin-bottom: 0.5rem;"><strong>Transacción:</strong> Procesando (Pendiente / Acreditándose)</div>
+                                <div style="margin-top: 1rem; color: var(--color-text-muted);">El pago se está procesando. Una vez acreditado por Mercado Pago, tu pedido se despachará automáticamente. Te enviaremos un e-mail con la confirmación.</div>
+                            `;
+                            sessionStorage.removeItem('last_order_id');
+                        }
+                    } else {
+                        throw new Error("No se encontró la orden.");
+                    }
+                })
+                .catch(err => {
+                    console.error("Error polling order status:", err);
+                    successBox.innerHTML = `
+                        <div style="margin-bottom: 0.5rem;"><strong>Número de Pedido:</strong> #${orderId}</div>
+                        <div><strong>Transacción:</strong> Estado en verificación</div>
+                        <div style="margin-top: 1rem; color: var(--color-text-muted);">No pudimos verificar el estado del pago al instante, pero procesaremos tu orden tan pronto como Mercado Pago notifique la acreditación.</div>
+                    `;
+                });
+            };
+
+            setTimeout(checkStatus, 1000);
+        } else {
+            successBox.innerHTML = `
+                <div style="margin-bottom: 0.5rem;"><strong>Número de Pedido:</strong> #${orderId}</div>
+                <div><strong>Transacción:</strong> Recibida</div>
+                <div style="margin-top: 1rem;">Procesaremos tu pedido a la brevedad.</div>
+            `;
+        }
+    },
+
+    handleCheckoutFailure() {
+        const params = this.getHashParams();
+        const orderId = params.order_id || sessionStorage.getItem('last_order_id');
+        const detailText = document.getElementById('failure-details-text');
+        
+        if (orderId) {
+            detailText.innerText = `Referencia de orden interna: #${orderId}`;
+        } else {
+            detailText.innerText = "";
+        }
     },
 
     finalizePurchaseOrder() {
