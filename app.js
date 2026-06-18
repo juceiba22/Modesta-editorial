@@ -594,12 +594,18 @@ const app = {
         const paymentContainer = document.getElementById('payment-methods-container');
         if (isArgentina) {
             paymentContainer.innerHTML = `
-                <div class="payment-method-card selected" id="pay-card-mp" onclick="app.selectPaymentMethod('mp')">
+                <div class="payment-method-card selected" id="pay-card-mp" onclick="app.selectPaymentMethod('mercadopago')">
                     <img src="https://logotipode.com/wp-content/uploads/2021/10/mercado-pago-logo.png" alt="Mercado Pago Logo" class="payment-method-logo" onerror="this.src='assets/logo_icon.png'">
                     <div class="payment-method-title">Mercado Pago</div>
                     <div class="payment-method-desc">Tarjetas de crédito/débito, Pago Fácil/RapiPago, dinero en cuenta</div>
                 </div>
+                <div class="payment-method-card" id="pay-card-paypal" onclick="app.selectPaymentMethod('paypal')" style="margin-top: 1rem;">
+                    <img src="https://pngimg.com/d/paypal_PNG22.png" alt="PayPal Logo" class="payment-method-logo" onerror="this.src='assets/logo_icon.png'">
+                    <div class="payment-method-title">PayPal</div>
+                    <div class="payment-method-desc">Tarjetas internacionales o saldo en tu cuenta PayPal (en USD)</div>
+                </div>
             `;
+            this.selectedPaymentMethod = 'mercadopago';
         } else {
             paymentContainer.innerHTML = `
                 <div class="payment-method-card selected" id="pay-card-paypal" onclick="app.selectPaymentMethod('paypal')">
@@ -608,6 +614,7 @@ const app = {
                     <div class="payment-method-desc">Saldo PayPal o tarjetas internacionales (Visa, Mastercard, AMEX)</div>
                 </div>
             `;
+            this.selectedPaymentMethod = 'paypal';
         }
 
         this.updateOrderSummary();
@@ -619,7 +626,19 @@ const app = {
     },
 
     selectPaymentMethod(method) {
-        // Toggle active selection states if multiple payment options exist
+        this.selectedPaymentMethod = method;
+        const mpCard = document.getElementById('pay-card-mp');
+        const ppCard = document.getElementById('pay-card-paypal');
+        
+        if (mpCard) mpCard.classList.remove('selected');
+        if (ppCard) ppCard.classList.remove('selected');
+        
+        if (method === 'mercadopago' && mpCard) {
+            mpCard.classList.add('selected');
+        } else if (method === 'paypal' && ppCard) {
+            ppCard.classList.add('selected');
+        }
+        
         this.updateOrderSummary();
     },
 
@@ -710,7 +729,7 @@ const app = {
             shipping_state: document.getElementById('checkout-state').value,
             shipping_zip: document.getElementById('checkout-zip').value,
             shipping_country: countrySelect.value,
-            payment_method: isArgentina ? 'mercadopago' : 'paypal',
+            payment_method: this.selectedPaymentMethod || (isArgentina ? 'mercadopago' : 'paypal'),
             cart: this.cart.map(item => ({ id: item.id, quantity: item.quantity })),
             site_url: `${window.location.protocol}//${window.location.host}${window.location.pathname}`
         };
