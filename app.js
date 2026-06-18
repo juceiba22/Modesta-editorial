@@ -4,8 +4,8 @@
 const app = {
     // 0. SUPABASE CONFIGURATION
     // Reemplazar con las credenciales de tu panel de Supabase
-    supabaseUrl: "https://YOUR_PROJECT_ID.supabase.co",
-    supabaseAnonKey: "YOUR_ANON_KEY",
+    supabaseUrl: "https://noabatfkgcdlzlpyyvgz.supabase.co",
+    supabaseAnonKey: "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im5vYWJhdGZrZ2NkbHpscHl5dmd6Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODE3NjMyMjYsImV4cCI6MjA5NzMzOTIyNn0.jfviFnKkn4WhcXOwB8Ne6UeJ-v0OPlpaa_1RaVbSS2g",
 
     // 1. DATA STORES
     books: {
