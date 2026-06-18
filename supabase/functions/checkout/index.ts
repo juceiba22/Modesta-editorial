@@ -80,7 +80,7 @@ serve(async (req) => {
     // Determine currency and shipping cost
     // Mercado Pago = ARS, PayPal = USD
     const currency = payment_method === "mercadopago" ? "ARS" : "USD";
-    const shipping_cost = currency === "ARS" ? 3000 : 12;
+    const shipping_cost = 0;
 
     // Get DB books to validate prices and calculate totals securely
     const bookIds = cart.map((item) => item.id);

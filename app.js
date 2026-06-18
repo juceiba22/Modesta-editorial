@@ -574,7 +574,7 @@ const app = {
                         <div class="shipping-option-title">Correo Argentino / Andreani</div>
                         <div class="shipping-option-desc">Envío seguro certificado a domicilio a todo el país (3 a 7 días hábiles)</div>
                     </div>
-                    <div class="shipping-option-price">$3.000 ARS</div>
+                    <div class="shipping-option-price">$0 ARS (Gratis)</div>
                 </div>
             `;
         } else {
@@ -585,7 +585,7 @@ const app = {
                         <div class="shipping-option-title">DHL Express / FedEx Internacional</div>
                         <div class="shipping-option-desc">Envío internacional prioritario Courier con seguimiento (5 a 10 días hábiles)</div>
                     </div>
-                    <div class="shipping-option-price">$12 USD</div>
+                    <div class="shipping-option-price">$0 USD (Gratis)</div>
                 </div>
             `;
         }
@@ -670,12 +670,12 @@ const app = {
         // Shipping price
         let shipping = 0;
         if (isArgentina) {
-            shipping = 3000; // ARS
+            shipping = 0; // ARS (Gratis)
             if (summarySubtotal) summarySubtotal.innerText = `$${subtotal.toLocaleString('es-AR')} ARS`;
             if (summaryShipping) summaryShipping.innerText = `$${shipping.toLocaleString('es-AR')} ARS`;
             if (summaryTotal) summaryTotal.innerText = `$${(subtotal + shipping).toLocaleString('es-AR')} ARS`;
         } else {
-            shipping = 12; // USD
+            shipping = 0; // USD (Gratis)
             if (summarySubtotal) summarySubtotal.innerText = `$${subtotal.toLocaleString('en-US')} USD`;
             if (summaryShipping) summaryShipping.innerText = `$${shipping.toLocaleString('en-US')} USD`;
             if (summaryTotal) summaryTotal.innerText = `$${(subtotal + shipping).toLocaleString('en-US')} USD`;

@@ -1492,6 +1492,11 @@ footer {
         width: 100%;
         right: -100%;
     }
+    
+    .hero-logo-frame {
+        width: 300px;
+        height: 300px;
+    }
 }
 
 @media (max-width: 480px) {
@@ -1511,6 +1516,16 @@ footer {
     
     .hero-cta .btn {
         width: 100%;
+    }
+    
+    .hero-logo-frame {
+        width: 260px;
+        height: 260px;
+    }
+    
+    .detail-cover-wrapper {
+        width: 280px;
+        height: 390px;
     }
     
     .detail-info h2 {
