@@ -110,7 +110,7 @@ serve(async (req) => {
           }
 
           // 2. Insert Payment record
-          const { error: insertPayment   } = await supabase
+          const { error: insertPaymentError } = await supabase
             .from("payments")
             .insert({
               order_id: orderId,
