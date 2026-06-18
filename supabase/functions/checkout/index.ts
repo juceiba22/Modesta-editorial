@@ -165,6 +165,7 @@ serve(async (req) => {
 
     if (payment_method === "mercadopago") {
       const mpToken = Deno.env.get("MERCADOPAGO_ACCESS_TOKEN");
+      console.log("MP Token primeros 20 chars:", mpToken?.substring(0, 20));
       if (!mpToken) {
         throw new Error("Mercado Pago Access Token no configurado en el servidor.");
       }
