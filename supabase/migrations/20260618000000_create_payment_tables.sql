@@ -76,9 +76,9 @@ create trigger trigger_orders_updated_at
 -- 6. SEED DATA FOR BOOKS
 insert into public.books (id, title, author, price_ars, price_usd)
 values 
-    ('posturas', 'Posturas', 'Mercedes Miralpeix', 15000, 15),
-    ('circulantes', 'Circulantes', 'Jorge F. Pantaleón', 15000, 15),
-    ('desborde', 'Desbordes', 'Hernán Ulm', 15000, 15)
+    ('posturas', 'Posturas', 'Mercedes Miralpeix', 150, 1.5),
+    ('circulantes', 'Circulantes', 'Jorge F. Pantaleón', 150, 1.5),
+    ('desborde', 'Desbordes', 'Hernán Ulm', 150, 1.5)
 on conflict (id) do update set
     title = excluded.title,
     author = excluded.author,

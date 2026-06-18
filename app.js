@@ -14,8 +14,8 @@ const app = {
             title: "Posturas",
             author: "Mercedes Miralpeix",
             artist: "Virginia Montaldi (Pinturas)",
-            price: 15000,
-            priceUSD: 15,
+            price: 150,
+            priceUSD: 1.50,
             coverFront: "assets/cover_posturas.jpg",
             coverBack: "assets/cover_posturas.jpg", // Single cover image
             hasBack: false,
@@ -35,8 +35,8 @@ const app = {
             title: "Circulantes",
             author: "Jorge F. Pantaleón",
             artist: "Sergio Díaz (Intervenciones sobre billetes)",
-            price: 15000,
-            priceUSD: 15,
+            price: 150,
+            priceUSD: 1.50,
             coverFront: "assets/cover_circulantes_front.png",
             coverBack: "assets/cover_circulantes_back.png",
             hasBack: true,
@@ -56,8 +56,8 @@ const app = {
             title: "Desbordes",
             author: "Hernán Ulm",
             artist: "Roly Arias (Dibujos)",
-            price: 15000,
-            priceUSD: 15,
+            price: 150,
+            priceUSD: 1.50,
             coverFront: "assets/cover_desborde_front.png",
             coverBack: "assets/cover_desborde_back.png",
             hasBack: true,
@@ -73,7 +73,37 @@ const app = {
             ]
         }
     },
-    
+
+    authors: {
+        miralpeix: {
+            id: "miralpeix",
+            name: "Mercedes Miralpeix",
+            initials: "MM",
+            bookTitle: "Posturas",
+            bookId: "posturas",
+            bio: "Es Licenciada en Filosofía por la Universidad Nacional de Salta (UNSa). Docente en la Facultad de Humanidades de la UNSa e investigadora especializada en el pensamiento político y filosófico de Walter Benjamin y Hannah Arendt. Realizó sus estudios doctorales en Filosofía en la Universidad Nacional de La Plata (UNLP) con beca del CONICET. Es autora de numerosos artículos en revistas académicas y ha coordinado proyectos de filosofía con niños y jóvenes en la región.",
+            backCover: "Este libro es un encuentro entre dos formas de pensamiento: la escritura de Mercedes Miralpeix y la pintura de Virginia Montaldi. Ni una teoría que explica, ni una obra que ilustra: aquí lo que se abre es un diálogo crítico, feminista y situado. Las pinturas de Montaldi convocan una experiencia sensible del arte, y Miralpeix responde con una escritura que piensa desde el cuerpo y sus pliegues. Una invitación a mirar de otra manera."
+        },
+        pantaleon: {
+            id: "pantaleon",
+            name: "Jorge F. Pantaleón",
+            initials: "JP",
+            bookTitle: "Circulantes",
+            bookId: "circulantes",
+            bio: "Es antropólogo, disciplina desde la cual comenzó a interrogar los vínculos entre técnica, política y vida cotidiana. Actualmente es profesor en el Departamento de Antropología de la Universidad de Montreal e investigador del Centre de Recherches Internationales de esa misma universidad. Ha codirigido la Cátedra de Estudios de las Américas y fue director de la Cátedra de Estudios del México Contemporáneo.",
+            backCover: "Este libro es, ante todo, un intercambio: entre disciplinas, entre territorios, entre imaginaciones, entre imágenes, entre reflexiones, entre personas. Jorge F. Pantaleón retoma su larga trayectoria investigando cómo nos relacionamos con el dinero —como valor, como creencia, como memoria y como vínculo— y la entrelaza con las provocadoras intervenciones artísticas de Sergio Díaz sobre los billetes. Así surge una conversación situada y desobediente."
+        },
+        ulm: {
+            id: "ulm",
+            name: "Hernán Ulm",
+            initials: "HU",
+            bookTitle: "Desbordes",
+            bookId: "desborde",
+            bio: "Es filósofo. En sus trabajos ha indagado sobre el arte, la imagen, la política y la estética contemporánea. Ha desarrollado un pensamiento original sobre el modo en que el arte ha transformado nuestro modo de concebir, conocer e interpretar la realidad. Esta es su tercera publicación luego de Cuestión de imágenes y Rituales de la percepción: artes, técnicas, políticas.",
+            backCover: "En la época de la imagen digital y su hiper-visualización, este libro explora los dibujos de Roly Arias como un espacio donde los límites se transforman y contaminan. La escritura reflexiva de Hernán Ulm nos invita a sumergirnos en esta experiencia estética, política y colectiva del presente. Memoria viva de un ojo estallado en cruce con la historia, el amor y la discrepancia."
+        }
+    },
+
     manifesto: `
         <p class="manifesto-lead">Modesta Editorial nace con el propósito de promover, acompañar y desarrollar la publicación de autoras y autores situados en la región, cuyas obras permitan pensar las singularidades de nuestra experiencia histórica, cultural y política.</p>
         <p>El proyecto parte de una premisa inicial: escribir y publicar desde este lugar del mundo implica también disputar sentidos. Si el neoliberalismo produce periferias, silencios y formas de subordinación cultural, publicar desde la región constituye una manera de interrumpir esa lógica y afirmar otras voces, otros relatos y otras formas de pensamiento.</p>
@@ -91,6 +121,7 @@ const app = {
         this.loadCart();
         this.loadUserReviews();
         this.renderCatalog();
+        this.renderAuthors();
         this.setupRouter();
         this.setupEventListeners();
         this.updateCartUI();
@@ -131,6 +162,9 @@ const app = {
             } else if (hash === '#checkout') {
                 this.renderCheckout();
                 document.getElementById('checkout').classList.add('active');
+            } else if (hash === '#nuestros-autores') {
+                this.renderAuthors();
+                document.getElementById('nuestros-autores').classList.add('active');
             } else {
                 const activeSection = document.querySelector(hash);
                 if (activeSection) {
@@ -234,6 +268,36 @@ const app = {
 
         if (featuredGrid) featuredGrid.innerHTML = booksHTML;
         if (catalogGrid) catalogGrid.innerHTML = booksHTML;
+    },
+
+    renderAuthors() {
+        const container = document.getElementById('authors-container');
+        if (!container) return;
+
+        let authorsHTML = '';
+        Object.values(this.authors).forEach(author => {
+            authorsHTML += `
+                <div class="author-card">
+                    <div class="author-header">
+                        <div class="author-avatar-container" style="background-color: var(--color-bg); display: flex; align-items: center; justify-content: center; font-weight: 700; font-size: 1.5rem; color: var(--color-accent);">
+                            ${author.initials}
+                        </div>
+                        <div class="author-meta">
+                            <h3>${author.name}</h3>
+                            <a href="#libro-detalle/${author.bookId}" class="author-book-badge">Ver Libro "${author.bookTitle}"</a>
+                        </div>
+                    </div>
+                    <div class="author-bio">
+                        ${author.bio}
+                    </div>
+                    <div class="author-quote-box">
+                        <div class="author-quote-title">De la Contratapa</div>
+                        <p class="author-quote">"${author.backCover}"</p>
+                    </div>
+                </div>
+            `;
+        });
+        container.innerHTML = authorsHTML;
     },
 
     renderBookDetail(bookId) {
