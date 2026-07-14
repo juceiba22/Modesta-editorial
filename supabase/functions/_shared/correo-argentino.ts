@@ -101,11 +101,12 @@ export async function importShippingToCorreo(order: any, customerId: string, bas
   const totalWeight = totalBooks * 400; // 400g per book
   
   const deliveryType = order.correo_delivery_type || "D";
+  const productType = order.correo_service || "CP";
   const postalOrigin = Deno.env.get("CORREO_POSTAL_ORIGIN") || "A4400";
   
   const shippingPayload: any = {
     deliveryType: deliveryType,
-    productType: "CP",
+    productType: productType,
     weight: totalWeight,
     declaredValue: order.total_amount, // Optional depending on API, but good to have
     height: 15,

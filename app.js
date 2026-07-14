@@ -669,7 +669,7 @@ const app = {
         this.selectedShippingType = optionId;
         this.selectedShippingCost = cost;
         
-        if (optionId === 'S') {
+        if (optionId.startsWith('S')) {
             const stateInput = document.getElementById('checkout-state');
             this.fetchAgencies(stateInput.value);
             const agenciesContainer = document.getElementById('agencies-container');
@@ -734,7 +734,7 @@ const app = {
 
             ratesArray.forEach((rate, index) => {
                 if (!rate.deliveredType) return;
-                const typeId = rate.deliveredType;
+                const typeId = `${rate.deliveredType}_${rate.productType || 'CP'}`;
                 const cost = Number(rate.price);
                 const isSelected = index === 0;
                 
@@ -747,7 +747,7 @@ const app = {
                     <div class="shipping-option ${isSelected ? 'selected' : ''}" onclick="app.selectShippingOption('${typeId}', ${cost})">
                         <input type="radio" id="ship-${typeId}" name="shipping-type" ${isSelected ? 'checked' : ''}>
                         <div class="shipping-option-details">
-                            <div class="shipping-option-title">${rate.productName || 'Correo Argentino'} a ${typeId === 'S' ? 'Sucursal' : 'Domicilio'}</div>
+                            <div class="shipping-option-title">${rate.productName || 'Correo Argentino'} a ${rate.deliveredType === 'S' ? 'Sucursal' : 'Domicilio'}</div>
                             <div class="shipping-option-desc">Tiempo estimado: ${rate.deliveryTimeMin} a ${rate.deliveryTimeMax} días hábiles</div>
                         </div>
                         <div class="shipping-option-price">$${cost.toLocaleString('en-US')} ARS</div>

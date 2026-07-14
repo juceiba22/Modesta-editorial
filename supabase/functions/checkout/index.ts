@@ -123,7 +123,11 @@ serve(async (req) => {
     // For dynamic shipping cost calculation
     let final_shipping_cost = 0;
     
-    if ((shipping_type === "D" || shipping_type === "S") && shipping_country === "AR") {
+    // shipping_type from frontend is now "S_CP", "D_CP", etc.
+    const delivType = shipping_type?.split('_')[0];
+    const prodType = shipping_type?.split('_')[1] || 'CP';
+
+    if ((delivType === "D" || delivType === "S") && shipping_country === "AR") {
        try {
            const baseUrl = Deno.env.get("CORREO_API_BASE_URL");
            const customerId = Deno.env.get("CORREO_CUSTOMER_ID");
@@ -150,16 +154,16 @@ serve(async (req) => {
            });
            
            if (ratesRes.ok) {
-               const ratesData = await ratesRes.json();
-               if (ratesData && ratesData.rates) {
-                   const matchedRate = ratesData.rates.find((r: any) => r.deliveredType === shipping_type);
-                   if (matchedRate) {
-                       final_shipping_cost = Number(matchedRate.price);
-                   } else {
-                       throw new Error("Opción de envío no disponible para el destino.");
-                   }
-               }
-           } else {
+                const ratesData = await ratesRes.json();
+                if (ratesData && ratesData.rates) {
+                    const matchedRate = ratesData.rates.find((r: any) => r.deliveredType === delivType && r.productType === prodType);
+                    if (matchedRate) {
+                        final_shipping_cost = Number(matchedRate.price);
+                    } else {
+                        throw new Error("Opción de envío no disponible para el destino.");
+                    }
+                }
+            } else {
                throw new Error("No se pudo cotizar el envío con Correo Argentino.");
            }
        } catch (e: any) {
@@ -203,9 +207,10 @@ serve(async (req) => {
         shipping_zip,
         shipping_country,
         shipping_cost: final_shipping_cost,
-        correo_delivery_type: shipping_type,
-        correo_agency: shipping_agency,
+        correo_delivery_type: delivType,
+        correo_service: prodType,
         correo_price: final_shipping_cost,
+        correo_agency: shipping_agency,
         subtotal,
         total_amount,
         currency,
