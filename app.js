@@ -210,6 +210,21 @@ const app = {
                 this.updateCheckoutShippingAndPayment();
             });
         }
+        
+        // Dynamic Shipping Fetching
+        const zipInput = document.getElementById('checkout-zip');
+        const stateInput = document.getElementById('checkout-state');
+        if (zipInput) {
+            zipInput.addEventListener('blur', () => this.fetchShippingRates());
+        }
+        if (stateInput) {
+            stateInput.addEventListener('blur', () => {
+                this.fetchShippingRates();
+                if (this.selectedShippingType === 'S') {
+                    this.fetchAgencies(stateInput.value);
+                }
+            });
+        }
 
         // Checkout submit
         const checkoutForm = document.getElementById('checkout-form');
@@ -559,6 +574,11 @@ const app = {
         if (isArgentina) {
             stateLabel.innerText = "Provincia *";
             stateInput.placeholder = "Salta";
+            stateInput.onchange = () => {
+                if (document.getElementById('shipping-options-container').innerHTML.includes('ship-S')) {
+                    this.fetchAgencies(stateInput.value);
+                }
+            };
         } else {
             stateLabel.innerText = "Estado / Región *";
             stateInput.placeholder = "Región Metropolitana, etc.";
@@ -568,16 +588,18 @@ const app = {
         const shippingContainer = document.getElementById('shipping-options-container');
         if (isArgentina) {
             shippingContainer.innerHTML = `
-                <div class="shipping-option selected" onclick="app.selectShippingOption('national')">
-                    <input type="radio" id="ship-nat" name="shipping-type" checked>
-                    <div class="shipping-option-details">
-                        <div class="shipping-option-title">Correo Argentino / Andreani</div>
-                        <div class="shipping-option-desc">Envío seguro certificado a domicilio a todo el país (3 a 7 días hábiles)</div>
-                    </div>
-                    <div class="shipping-option-price">$0 ARS (Gratis)</div>
+                <div style="padding: 1.5rem; background: var(--color-bg-alt); border-radius: 8px; border: 1px solid var(--color-border); text-align: center;">
+                    <p style="color: var(--color-text-muted); margin-bottom: 0;">Ingresa tu Código Postal y Provincia para ver las opciones de envío de Correo Argentino.</p>
                 </div>
             `;
+            this.selectedShippingCost = 0;
+            this.selectedShippingType = null;
+            this.selectedShippingAgency = null;
+            document.getElementById('checkout-zip').addEventListener('input', () => this.fetchShippingRates());
         } else {
+            this.selectedShippingCost = 0;
+            this.selectedShippingType = 'international';
+            this.selectedShippingAgency = null;
             shippingContainer.innerHTML = `
                 <div class="shipping-option selected" onclick="app.selectShippingOption('international')">
                     <input type="radio" id="ship-int" name="shipping-type" checked>
@@ -620,9 +642,175 @@ const app = {
         this.updateOrderSummary();
     },
 
-    selectShippingOption(type) {
-        // In this case we only have one option per region, but the selection acts as UI feedback
+    selectShippingOption(optionId, cost = 0) {
+        document.querySelectorAll('.shipping-option').forEach(el => {
+            el.classList.remove('selected');
+        });
+        const selectedEl = document.querySelector(`.shipping-option[onclick*="'${optionId}'"]`) || document.querySelector(`.shipping-option[onclick*="('${optionId}'"]`);
+        if (selectedEl) {
+            selectedEl.classList.add('selected');
+            const radio = selectedEl.querySelector('input[type="radio"]');
+            if (radio) radio.checked = true;
+        }
+
+        this.selectedShippingType = optionId;
+        this.selectedShippingCost = cost;
+        
+        if (optionId === 'S') {
+            const stateInput = document.getElementById('checkout-state');
+            this.fetchAgencies(stateInput.value);
+            const agenciesContainer = document.getElementById('agencies-container');
+            if (agenciesContainer) agenciesContainer.style.display = 'block';
+        } else {
+            this.selectedShippingAgency = null;
+            const agenciesContainer = document.getElementById('agencies-container');
+            if (agenciesContainer) agenciesContainer.style.display = 'none';
+        }
+        
         this.updateOrderSummary();
+    },
+
+    selectAgency(agencyCode) {
+        this.selectedShippingAgency = agencyCode;
+    },
+
+    async fetchShippingRates() {
+        const countrySelect = document.getElementById('checkout-country');
+        const zipInput = document.getElementById('checkout-zip');
+        const shippingContainer = document.getElementById('shipping-options-container');
+        
+        if (!countrySelect || countrySelect.value !== 'AR' || !zipInput || !zipInput.value || zipInput.value.length < 4) {
+            return;
+        }
+
+        shippingContainer.innerHTML = `
+            <div style="text-align: center; padding: 2rem;">
+                <i class="fa-solid fa-circle-notch fa-spin" style="font-size: 2rem; color: var(--color-accent);"></i>
+                <p style="margin-top: 1rem; color: var(--color-text-muted);">Cotizando envíos...</p>
+            </div>
+        `;
+
+        try {
+            const totalQuantity = this.cart.reduce((acc, item) => acc + item.quantity, 0);
+            const res = await fetch(`${this.supabaseUrl}/functions/v1/correo-argentino-rates`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'apikey': this.supabaseAnonKey
+                },
+                body: JSON.stringify({ 
+                    postalCodeDestination: zipInput.value,
+                    totalQuantity: totalQuantity
+                })
+            });
+
+            if (!res.ok) throw new Error("No se pudieron cargar las tarifas de envío");
+            
+            const data = await res.json();
+            const rates = data.rates || data.rates?.rates || []; 
+            let ratesArray = Array.isArray(rates) ? rates : (Array.isArray(data.rates) ? data.rates : data);
+
+            if (!Array.isArray(ratesArray) || ratesArray.length === 0) {
+                shippingContainer.innerHTML = `<p style="color: var(--color-error);">No hay opciones de envío para este código postal.</p>`;
+                return;
+            }
+
+            let html = '';
+            let firstId = null;
+            let firstCost = 0;
+
+            ratesArray.forEach((rate, index) => {
+                if (!rate.deliveredType) return;
+                const typeId = rate.deliveredType;
+                const cost = Number(rate.price);
+                const isSelected = index === 0;
+                
+                if (isSelected) {
+                    firstId = typeId;
+                    firstCost = cost;
+                }
+
+                html += `
+                    <div class="shipping-option ${isSelected ? 'selected' : ''}" onclick="app.selectShippingOption('${typeId}', ${cost})">
+                        <input type="radio" id="ship-${typeId}" name="shipping-type" ${isSelected ? 'checked' : ''}>
+                        <div class="shipping-option-details">
+                            <div class="shipping-option-title">${rate.productName || 'Correo Argentino'} a ${typeId === 'S' ? 'Sucursal' : 'Domicilio'}</div>
+                            <div class="shipping-option-desc">Tiempo estimado: ${rate.deliveryTimeMin} a ${rate.deliveryTimeMax} días hábiles</div>
+                        </div>
+                        <div class="shipping-option-price">$${cost.toLocaleString('en-US')} ARS</div>
+                    </div>
+                `;
+            });
+            
+            html += `<div id="agencies-container" style="display: none; margin-top: 1rem;"></div>`;
+            shippingContainer.innerHTML = html;
+            
+            if (firstId) {
+                this.selectShippingOption(firstId, firstCost);
+            }
+
+        } catch (error) {
+            console.error("Error fetching rates:", error);
+            shippingContainer.innerHTML = `<p style="color: var(--color-error);">Error al cotizar el envío. Intenta nuevamente.</p>`;
+        }
+    },
+
+    async fetchAgencies(provinceName) {
+        const agenciesContainer = document.getElementById('agencies-container');
+        if (!agenciesContainer || !provinceName) return;
+
+        const provinceMap = {
+            "buenos aires": "B", "capital federal": "C", "caba": "C", "catamarca": "K", "chaco": "H", 
+            "chubut": "U", "cordoba": "X", "córdoba": "X", "corrientes": "W", "entre rios": "E", 
+            "entre ríos": "E", "formosa": "P", "jujuy": "Y", "la pampa": "L", "la rioja": "F", 
+            "mendoza": "M", "misiones": "N", "neuquen": "Q", "neuquén": "Q", "rio negro": "R", 
+            "río negro": "R", "salta": "A", "san juan": "J", "san luis": "D", "santa cruz": "Z", 
+            "santa fe": "S", "santiago del estero": "G", "tierra del fuego": "V", "tucuman": "T", "tucumán": "T"
+        };
+        const pCode = provinceMap[provinceName.toLowerCase().trim()] || "A";
+
+        agenciesContainer.innerHTML = `<p style="font-size: 0.9rem; color: var(--color-text-muted);">Cargando sucursales...</p>`;
+
+        try {
+            const res = await fetch(`${this.supabaseUrl}/functions/v1/correo-argentino-agencies`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'apikey': this.supabaseAnonKey
+                },
+                body: JSON.stringify({ provinceCode: pCode })
+            });
+
+            if (!res.ok) throw new Error("Failed to load agencies");
+            
+            const data = await res.json();
+            const agencies = data.agencies || [];
+            
+            if (agencies.length === 0) {
+                agenciesContainer.innerHTML = `<p style="color: var(--color-error); font-size: 0.9rem;">No se encontraron sucursales en tu provincia.</p>`;
+                return;
+            }
+
+            let selectHtml = `
+                <label style="font-size: 0.9rem; font-weight: 500; margin-bottom: 0.5rem; display: block;">Selecciona la Sucursal:</label>
+                <select id="checkout-agency" class="form-input" style="width: 100%; margin-bottom: 1rem;" onchange="app.selectAgency(this.value)">
+                    <option value="" disabled selected>Elige una sucursal...</option>
+            `;
+
+            agencies.forEach(ag => {
+                const street = ag.location?.address?.streetName || '';
+                const number = ag.location?.address?.streetNumber || '';
+                const loc = ag.location?.locality || '';
+                selectHtml += `<option value="${ag.code}">${ag.name} - ${street} ${number} (${loc})</option>`;
+            });
+
+            selectHtml += `</select>`;
+            agenciesContainer.innerHTML = selectHtml;
+
+        } catch (error) {
+            console.error("Error fetching agencies:", error);
+            agenciesContainer.innerHTML = `<p style="color: var(--color-error); font-size: 0.9rem;">Error al cargar las sucursales.</p>`;
+        }
     },
 
     selectPaymentMethod(method) {
@@ -730,6 +918,9 @@ const app = {
             shipping_zip: document.getElementById('checkout-zip').value,
             shipping_country: countrySelect.value,
             payment_method: this.selectedPaymentMethod || (isArgentina ? 'mercadopago' : 'paypal'),
+            shipping_type: this.selectedShippingType,
+            shipping_agency: this.selectedShippingAgency,
+            shipping_cost_frontend: this.selectedShippingCost,
             cart: this.cart.map(item => ({ id: item.id, quantity: item.quantity })),
             site_url: `${window.location.protocol}//${window.location.host}${window.location.pathname}`
         };

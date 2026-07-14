@@ -1,5 +1,6 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.39.0";
+import { getCorreoToken, getProvinceCode } from "../_shared/correo-argentino.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -22,6 +23,9 @@ interface CheckoutRequest {
   shipping_zip: string;
   shipping_country: string;
   payment_method: "paypal" | "mercadopago";
+  shipping_type?: string;
+  shipping_agency?: string;
+  shipping_cost_frontend?: number;
   cart: CartItem[];
   site_url?: string;
 }
@@ -53,6 +57,9 @@ serve(async (req) => {
       shipping_zip,
       shipping_country,
       payment_method,
+      shipping_type,
+      shipping_agency,
+      shipping_cost_frontend,
       cart,
       site_url = "https://modesta-editorial.com",
     } = body;
@@ -113,7 +120,57 @@ serve(async (req) => {
       };
     });
 
-    const total_amount = subtotal + shipping_cost;
+    // For dynamic shipping cost calculation
+    let final_shipping_cost = 0;
+    
+    if ((shipping_type === "D" || shipping_type === "S") && shipping_country === "AR") {
+       try {
+           const baseUrl = Deno.env.get("CORREO_API_BASE_URL");
+           const customerId = Deno.env.get("CORREO_CUSTOMER_ID");
+           const postalOrigin = Deno.env.get("CORREO_POSTAL_ORIGIN") || "A4400";
+           const token = await getCorreoToken();
+           
+           const totalBooks = cart.reduce((acc, item) => acc + item.quantity, 0);
+           const totalWeight = totalBooks * 400;
+
+           const ratePayload = {
+               customerId,
+               postalCodeOrigin: postalOrigin,
+               postalCodeDestination: shipping_zip,
+               dimensions: { weight: totalWeight, height: 15, width: 20, length: 30 }
+           };
+           
+           const ratesRes = await fetch(`${baseUrl}/rates`, {
+               method: "POST",
+               headers: {
+                   "Authorization": `Bearer ${token}`,
+                   "Content-Type": "application/json"
+               },
+               body: JSON.stringify(ratePayload)
+           });
+           
+           if (ratesRes.ok) {
+               const ratesData = await ratesRes.json();
+               if (ratesData && ratesData.rates) {
+                   const matchedRate = ratesData.rates.find((r: any) => r.deliveredType === shipping_type);
+                   if (matchedRate) {
+                       final_shipping_cost = Number(matchedRate.price);
+                   } else {
+                       throw new Error("Opción de envío no disponible para el destino.");
+                   }
+               }
+           } else {
+               throw new Error("No se pudo cotizar el envío con Correo Argentino.");
+           }
+       } catch (e: any) {
+           return new Response(
+               JSON.stringify({ error: `Error de envío: ${e.message}` }),
+               { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+           );
+       }
+    }
+
+    const total_amount = subtotal + final_shipping_cost;
 
     // Create Order in DB (status pending)
     const { data: order, error: orderError } = await supabase
@@ -127,7 +184,10 @@ serve(async (req) => {
         shipping_state,
         shipping_zip,
         shipping_country,
-        shipping_cost,
+        shipping_cost: final_shipping_cost,
+        correo_delivery_type: shipping_type,
+        correo_agency: shipping_agency,
+        correo_price: final_shipping_cost,
         subtotal,
         total_amount,
         currency,
@@ -183,9 +243,9 @@ serve(async (req) => {
       // Add shipping as an item in MP
       mpItems.push({
         id: "shipping",
-        title: "Envío a Domicilio",
+        title: "Envío " + (shipping_type === "S" ? "a Sucursal" : "a Domicilio"),
         quantity: 1,
-        unit_price: shipping_cost,
+        unit_price: final_shipping_cost,
         currency_id: "ARS",
         category_id: "shipping",
       });
@@ -288,7 +348,7 @@ serve(async (req) => {
                   },
                   shipping: {
                     currency_code: "USD",
-                    value: shipping_cost.toFixed(2),
+                    value: final_shipping_cost.toFixed(2),
                   },
                 },
               },

@@ -132,16 +132,20 @@ serve(async (req) => {
 
           // 3. Integrate with Correo Argentino
           try {
-            const baseUrl = Deno.env.get("CORREO_ARG_BASE_URL");
-            const customerId = Deno.env.get("CORREO_ARG_CUSTOMER_ID");
+            const baseUrl = Deno.env.get("CORREO_API_BASE_URL");
+            const customerId = Deno.env.get("CORREO_CUSTOMER_ID");
             
             if (baseUrl && customerId) {
               const correoToken = await getCorreoToken();
-              await importShippingToCorreo(order, customerId, baseUrl, correoToken);
+              const responseData = await importShippingToCorreo(order, customerId, baseUrl, correoToken);
               
               await supabase
                 .from("orders")
-                .update({ correo_argentino_status: "imported" })
+                .update({ 
+                    correo_imported: true,
+                    correo_response: responseData,
+                    correo_status: "IMPORTED" 
+                })
                 .eq("id", orderId);
               
               console.log(`Orden ${orderId} importada a Correo Argentino exitosamente.`);
@@ -153,7 +157,7 @@ serve(async (req) => {
             // Log as failed but do not revert payment
             await supabase
               .from("orders")
-              .update({ correo_argentino_status: "failed" })
+              .update({ correo_status: "FAILED", correo_imported: false })
               .eq("id", orderId);
           }
         } else if (status === "rejected" || status === "cancelled") {
