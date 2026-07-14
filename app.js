@@ -843,7 +843,7 @@ const app = {
         this.updateOrderSummary();
     },
 
-    updateOrderSummary() {
+    async updateOrderSummary() {
         const countrySelect = document.getElementById('checkout-country');
         const isArgentina = (countrySelect && countrySelect.value === 'AR');
         
@@ -851,6 +851,7 @@ const app = {
         const summarySubtotal = document.getElementById('summary-subtotal');
         const summaryShipping = document.getElementById('summary-shipping');
         const summaryTotal = document.getElementById('summary-total');
+        const checkoutTotalBtn = document.getElementById('checkout-submit-btn');
 
         if (this.cart.length === 0) {
             if (summaryItemsList) {
@@ -859,14 +860,28 @@ const app = {
             if (summarySubtotal) summarySubtotal.innerText = isArgentina ? '$0 ARS' : '$0 USD';
             if (summaryShipping) summaryShipping.innerText = isArgentina ? '$0 ARS' : '$0 USD';
             if (summaryTotal) summaryTotal.innerText = isArgentina ? '$0 ARS' : '$0 USD';
+            if (checkoutTotalBtn) checkoutTotalBtn.innerText = "Continuar al Pago";
             return;
+        }
+
+        let isUSD = !isArgentina || (isArgentina && this.selectedPaymentMethod === 'paypal');
+        let exchangeRate = 1000;
+
+        if (isArgentina && isUSD) {
+            try {
+                const res = await fetch("https://dolarapi.com/v1/dolares/oficial");
+                if (res.ok) {
+                    const data = await res.json();
+                    exchangeRate = data.venta || 1000;
+                }
+            } catch(e) {}
         }
 
         let itemsHTML = '';
         let subtotal = 0;
 
         this.cart.forEach(item => {
-            if (isArgentina) {
+            if (!isUSD) {
                 subtotal += item.price * item.quantity;
                 itemsHTML += `
                     <div class="summary-item">
@@ -888,18 +903,29 @@ const app = {
         if (summaryItemsList) summaryItemsList.innerHTML = itemsHTML;
 
         // Shipping price
-        let shipping = 0;
+        let shippingARS = isArgentina ? (this.selectedShippingCost || 0) : 0;
+        let shippingStr = "";
+        let finalShipping = 0;
+
         if (isArgentina) {
-            shipping = 0; // ARS (Gratis)
-            if (summarySubtotal) summarySubtotal.innerText = `$${subtotal.toLocaleString('es-AR')} ARS`;
-            if (summaryShipping) summaryShipping.innerText = `$${shipping.toLocaleString('es-AR')} ARS`;
-            if (summaryTotal) summaryTotal.innerText = `$${(subtotal + shipping).toLocaleString('es-AR')} ARS`;
+            if (isUSD) {
+                finalShipping = shippingARS > 0 ? Number((shippingARS / exchangeRate).toFixed(2)) : 0;
+                shippingStr = finalShipping > 0 ? `$${finalShipping.toLocaleString('en-US')} USD` : 'Gratis';
+            } else {
+                finalShipping = shippingARS;
+                shippingStr = finalShipping > 0 ? `$${finalShipping.toLocaleString('es-AR')} ARS` : 'Gratis';
+            }
         } else {
-            shipping = 0; // USD (Gratis)
-            if (summarySubtotal) summarySubtotal.innerText = `$${subtotal.toLocaleString('en-US')} USD`;
-            if (summaryShipping) summaryShipping.innerText = `$${shipping.toLocaleString('en-US')} USD`;
-            if (summaryTotal) summaryTotal.innerText = `$${(subtotal + shipping).toLocaleString('en-US')} USD`;
+            finalShipping = 0;
+            shippingStr = 'Gratis';
         }
+
+        const total = subtotal + finalShipping;
+
+        if (summarySubtotal) summarySubtotal.innerText = isUSD ? `$${subtotal.toLocaleString('en-US')} USD` : `$${subtotal.toLocaleString('es-AR')} ARS`;
+        if (summaryShipping) summaryShipping.innerText = shippingStr;
+        if (summaryTotal) summaryTotal.innerText = isUSD ? `$${total.toLocaleString('en-US')} USD` : `$${total.toLocaleString('es-AR')} ARS`;
+        if (checkoutTotalBtn) checkoutTotalBtn.innerText = isUSD ? `Pagar $${total.toLocaleString('en-US')} USD` : `Pagar $${total.toLocaleString('es-AR')} ARS`;
     },
 
     // 8. PAYMENT SIMULATION
