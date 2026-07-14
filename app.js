@@ -795,7 +795,10 @@ const app = {
         const params = this.getHashParams();
         const gateway = params.gateway;
         const orderId = params.order_id || sessionStorage.getItem('last_order_id');
-        const token = params.token;
+        
+        // PayPal appends token to the query string, not the hash in some cases
+        const urlParams = new URLSearchParams(window.location.search);
+        const token = params.token || urlParams.get('token');
 
         if (!orderId) {
             successBox.innerHTML = `
