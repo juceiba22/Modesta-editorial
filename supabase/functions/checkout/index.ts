@@ -170,6 +170,24 @@ serve(async (req) => {
        }
     }
 
+    // Convert shipping to USD if payment is PayPal
+    if (final_shipping_cost > 0 && currency === "USD") {
+        try {
+            // Fetch dynamic exchange rate from DolarAPI (Oficial or Tarjeta)
+            const dolarRes = await fetch("https://dolarapi.com/v1/dolares/oficial");
+            if (dolarRes.ok) {
+                const dolarData = await dolarRes.json();
+                const exchangeRate = dolarData.venta || 1000;
+                final_shipping_cost = Number((final_shipping_cost / exchangeRate).toFixed(2));
+            } else {
+                // Fallback static conversion if API fails
+                final_shipping_cost = Number((final_shipping_cost / 1000).toFixed(2));
+            }
+        } catch (e) {
+            final_shipping_cost = Number((final_shipping_cost / 1000).toFixed(2));
+        }
+    }
+
     const total_amount = subtotal + final_shipping_cost;
 
     // Create Order in DB (status pending)

@@ -148,6 +148,10 @@ const app = {
 
             window.scrollTo({ top: 0, behavior: 'smooth' });
 
+            // Close payment modal if it was open (prevents loop when returning via browser Back button)
+            const paymentModal = document.getElementById('payment-modal');
+            if (paymentModal) paymentModal.classList.remove('open');
+
             // Route parsing
             if (hash.startsWith('#libro-detalle/')) {
                 const bookId = hash.split('/')[1];
@@ -176,6 +180,15 @@ const app = {
         };
 
         window.addEventListener('hashchange', handleRoute);
+        
+        // Handle bfcache restorations (when user navigates back from PayPal/MercadoPago)
+        window.addEventListener('pageshow', (event) => {
+            if (event.persisted) {
+                const paymentModal = document.getElementById('payment-modal');
+                if (paymentModal) paymentModal.classList.remove('open');
+            }
+        });
+
         // Initial run
         handleRoute();
     },
