@@ -1,5 +1,6 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.39.0";
+import { getCorreoToken, importShippingToCorreo } from "../_shared/correo-argentino.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -156,6 +157,33 @@ serve(async (req) => {
 
       if (insertPaymentError) {
         console.error(`Advertencia: no se pudo guardar el registro de pago: ${insertPaymentError.message}`);
+      }
+
+      // 3. Integrate with Correo Argentino
+      try {
+        const baseUrl = Deno.env.get("CORREO_ARG_BASE_URL");
+        const customerId = Deno.env.get("CORREO_ARG_CUSTOMER_ID");
+        
+        if (baseUrl && customerId) {
+          const correoToken = await getCorreoToken();
+          await importShippingToCorreo(order, customerId, baseUrl, correoToken);
+          
+          await supabase
+            .from("orders")
+            .update({ correo_argentino_status: "imported" })
+            .eq("id", order_id);
+          
+          console.log(`Orden ${order_id} importada a Correo Argentino exitosamente.`);
+        } else {
+          console.warn("Saltando integración con Correo Argentino: variables no configuradas.");
+        }
+      } catch (correoError: any) {
+        console.error(`Error importando orden ${order_id} a Correo Argentino:`, correoError.message);
+        // Log as failed but do not revert payment
+        await supabase
+          .from("orders")
+          .update({ correo_argentino_status: "failed" })
+          .eq("id", order_id);
       }
 
       return new Response(
