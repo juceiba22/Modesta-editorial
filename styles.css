@@ -33,6 +33,7 @@
 html, body {
     overflow-x: hidden;
     width: 100%;
+    overflow-wrap: break-word;
 }
 
 body {
@@ -878,7 +879,7 @@ nav a:hover::after, nav a.active::after {
     position: fixed;
     top: 0;
     left: 0;
-    width: 100vw;
+    width: 100%;
     height: 100vh;
     background-color: rgba(26, 30, 27, 0.4);
     backdrop-filter: blur(4px);
@@ -1209,7 +1210,7 @@ nav a:hover::after, nav a.active::after {
     position: fixed;
     top: 0;
     left: 0;
-    width: 100vw;
+    width: 100%;
     height: 100vh;
     background-color: rgba(26, 30, 27, 0.6);
     backdrop-filter: blur(6px);
@@ -1500,6 +1501,10 @@ footer {
 }
 
 @media (max-width: 480px) {
+    .container {
+        padding: 0 1rem;
+    }
+
     .footer-grid {
         grid-template-columns: 1fr;
     }
@@ -1524,8 +1529,11 @@ footer {
     }
     
     .detail-cover-wrapper {
-        width: 280px;
-        height: 390px;
+        width: 100%;
+        max-width: 280px;
+        height: auto;
+        aspect-ratio: 280 / 390;
+        margin: 0 auto;
     }
     
     .detail-info h2 {
@@ -1645,5 +1653,9 @@ footer {
         grid-template-columns: 1fr;
         max-width: 500px;
         margin: 2rem auto 0 auto;
+    }
+    
+    .author-card {
+        padding: 1.5rem;
     }
 }
