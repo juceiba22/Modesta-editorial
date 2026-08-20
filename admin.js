@@ -68,6 +68,21 @@ function setupEventListeners() {
             tabContents.forEach(c => c.classList.remove('active'));
             btn.classList.add('active');
             document.getElementById(btn.dataset.target).classList.add('active');
+
+            if (btn.dataset.target === 'add-book') {
+                if (btn.textContent === 'Añadir Libro') {
+                    // Reset everything if it was just navigating to Add Book
+                    bookForm.reset();
+                    document.getElementById('book-id').removeAttribute('readonly');
+                    document.getElementById('book-id').style.backgroundColor = '';
+                    document.getElementById('book-cover-front').setAttribute('required', 'true');
+                    document.querySelector('#add-book h2').textContent = 'Subir Nuevo Libro';
+                }
+            } else if (btn.dataset.target === 'books-list') {
+                // If they go back to catalog, reset the Add Book tab text
+                const addTabBtn = document.querySelector('.tab-btn[data-target="add-book"]');
+                addTabBtn.textContent = 'Añadir Libro';
+            }
         });
     });
 
@@ -136,6 +151,15 @@ function setupEventListeners() {
             bookFormMsg.className = 'success';
             bookFormMsg.textContent = 'Libro y datos guardados exitosamente.';
             bookForm.reset();
+            
+            // Reset states
+            document.getElementById('book-id').removeAttribute('readonly');
+            document.getElementById('book-id').style.backgroundColor = '';
+            document.getElementById('book-cover-front').setAttribute('required', 'true');
+            const addTabBtn = document.querySelector('.tab-btn[data-target="add-book"]');
+            addTabBtn.textContent = 'Añadir Libro';
+            document.querySelector('#add-book h2').textContent = 'Subir Nuevo Libro';
+
             loadBooks();
         } catch (err) {
             bookFormMsg.className = 'error';
@@ -144,6 +168,8 @@ function setupEventListeners() {
     });
 }
 
+let currentBooks = [];
+
 async function loadBooks() {
     const { data: books, error } = await supabase.from('books').select('*').order('created_at', { ascending: false });
     if (error) {
@@ -151,6 +177,7 @@ async function loadBooks() {
         return;
     }
 
+    currentBooks = books;
     booksTableBody.innerHTML = '';
     books.forEach(book => {
         const tr = document.createElement('tr');
@@ -161,6 +188,7 @@ async function loadBooks() {
             <td>$${book.price_ars}</td>
             <td>$${book.price_usd} USD</td>
             <td>
+                <button class="btn-edit" data-id="${book.id}">Editar</button>
                 <button class="btn-delete" data-id="${book.id}">Eliminar</button>
             </td>
         `;
@@ -174,6 +202,41 @@ async function loadBooks() {
                 await supabase.from('books').delete().eq('id', id);
                 loadBooks();
             }
+        });
+    });
+
+    document.querySelectorAll('.btn-edit').forEach(btn => {
+        btn.addEventListener('click', (e) => {
+            const id = e.target.dataset.id;
+            const book = currentBooks.find(b => b.id === id);
+            if (!book) return;
+
+            // Populate form
+            document.getElementById('book-id').value = book.id;
+            document.getElementById('book-id').setAttribute('readonly', true);
+            document.getElementById('book-id').style.backgroundColor = '#eee';
+            
+            document.getElementById('book-title').value = book.title;
+            document.getElementById('book-author').value = book.author;
+            document.getElementById('book-artist').value = book.artist || '';
+            document.getElementById('book-price-ars').value = book.price_ars;
+            document.getElementById('book-price-usd').value = book.price_usd;
+            document.getElementById('book-has-back').checked = book.has_back;
+            document.getElementById('book-desc').value = book.description || '';
+            document.getElementById('book-features').value = book.features || '';
+
+            // Optional image requirements (remove required if editing)
+            document.getElementById('book-cover-front').removeAttribute('required');
+
+            // Switch to add-book tab
+            tabBtns.forEach(b => b.classList.remove('active'));
+            tabContents.forEach(c => c.classList.remove('active'));
+            const addTabBtn = document.querySelector('.tab-btn[data-target="add-book"]');
+            addTabBtn.classList.add('active');
+            addTabBtn.textContent = 'Editar Libro';
+            document.getElementById('add-book').classList.add('active');
+            
+            document.querySelector('#add-book h2').textContent = 'Editar Libro';
         });
     });
 }
