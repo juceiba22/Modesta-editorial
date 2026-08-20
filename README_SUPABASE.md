@@ -97,4 +97,25 @@ Abre tu archivo local `app.js` de frontend y actualiza la constante en la línea
 const SUPABASE_FUNCTIONS_URL = "https://TU_PROJECT_ID.supabase.co/functions/v1";
 ```
 
-¡Listo! El checkout de Modesta Editorial ahora procesará las órdenes, guardará el historial en tu base de datos de Supabase y redirigirá a pagos reales a través de PayPal y Mercado Pago.
+---
+
+## 6. Configuración del Panel de Administración (Admin Dashboard)
+
+Se ha creado un panel de administración para gestionar el catálogo de libros, subir imágenes de portada y contraportada, y fijar los precios.
+
+### Paso 1: Ejecutar las Migraciones Adicionales
+Para que el dashboard funcione, debes extender la base de datos de Supabase. Copia el contenido de los siguientes archivos y ejecútalos en el **SQL Editor** de Supabase en este orden:
+1. `supabase/migrations/20260715000000_extend_books_for_admin.sql` (Agrega columnas a la tabla de libros, crea la tabla de reseñas y crea el Storage para imágenes).
+2. `supabase/migrations/20260716000000_seed_books_details.sql` (Inserta los detalles y las reseñas de los 3 libros iniciales en la base de datos).
+
+### Paso 2: Configurar un Usuario Administrador
+1. En tu panel de Supabase, ve a **Authentication** > **Users**.
+2. Haz clic en **Add User** > **Create New User**.
+3. Ingresa un email y una contraseña. Este será el usuario que usarás para ingresar al Admin Dashboard.
+
+### Paso 3: Usar el Dashboard
+Abre el archivo `admin.html` en tu navegador.
+Inicia sesión con el email y contraseña que creaste en el paso anterior.
+Desde allí podrás ver, crear y eliminar libros en tiempo real, los cuales se reflejarán automáticamente en el sitio principal (`app.js` ya fue modificado para leer desde la base de datos de Supabase).
+
+¡Listo! El checkout y el catálogo de Modesta Editorial ahora son dinámicos y están conectados a tu base de datos y Storage de Supabase.

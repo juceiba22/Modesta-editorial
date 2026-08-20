@@ -117,7 +117,8 @@ const app = {
     tempReviewStars: 5,
 
     // 2. INITIALIZATION
-    init() {
+    async init() {
+        await this.loadBooksFromSupabase();
         this.loadCart();
         this.loadUserReviews();
         this.renderCatalog();
@@ -126,6 +127,60 @@ const app = {
         this.setupEventListeners();
         this.updateCartUI();
         this.renderManifesto();
+    },
+
+    async loadBooksFromSupabase() {
+        try {
+            const res = await fetch(`${this.supabaseUrl}/rest/v1/books?select=*`, {
+                headers: {
+                    'apikey': this.supabaseAnonKey,
+                    'Authorization': `Bearer ${this.supabaseAnonKey}`
+                }
+            });
+            if (!res.ok) throw new Error('Failed to fetch books');
+            const data = await res.json();
+            
+            if (data && data.length > 0) {
+                const reviewsRes = await fetch(`${this.supabaseUrl}/rest/v1/reviews?select=*`, {
+                    headers: {
+                        'apikey': this.supabaseAnonKey,
+                        'Authorization': `Bearer ${this.supabaseAnonKey}`
+                    }
+                });
+                let reviewsData = [];
+                if (reviewsRes.ok) {
+                    reviewsData = await reviewsRes.json();
+                }
+
+                this.books = {};
+                data.forEach(book => {
+                    const bookReviews = reviewsData.filter(r => r.book_id === book.id).map(r => ({
+                        name: r.name,
+                        rating: r.rating,
+                        date: r.date,
+                        comment: r.comment
+                    }));
+                    
+                    this.books[book.id] = {
+                        id: book.id,
+                        title: book.title,
+                        author: book.author,
+                        artist: book.artist || '',
+                        price: book.price_ars,
+                        priceUSD: book.price_usd,
+                        coverFront: book.cover_front_url || "assets/cover_placeholder.png",
+                        coverBack: book.cover_back_url || "assets/cover_placeholder.png",
+                        hasBack: book.has_back || false,
+                        desc: book.description || '',
+                        features: book.features || '',
+                        reviews: bookReviews
+                    };
+                });
+            }
+        } catch (err) {
+            console.error("Error loading books from Supabase:", err);
+            // fallback to hardcoded this.books if failed
+        }
     },
 
     // 3. ROUTER & SECTIONS
