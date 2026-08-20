@@ -10,15 +10,15 @@
 </head>
 <body>
     <header class="admin-header">
-        <h1>Admin - Modesta Editorial</h1>
-        <button id="logout-btn" style="display: none;">Cerrar Sesión</button>
+        <h1>Admin - Modesta</h1>
+        <button id="logout-btn" class="btn btn-secondary" style="display: none;">Cerrar Sesión</button>
     </header>
 
     <main class="admin-main">
         <!-- Auth View -->
         <section id="auth-view" class="view active">
-            <h2>Iniciar Sesión</h2>
             <form id="login-form">
+                <h2>Iniciar Sesión</h2>
                 <label>
                     Email:
                     <input type="email" id="login-email" required>
@@ -27,7 +27,7 @@
                     Contraseña:
                     <input type="password" id="login-password" required>
                 </label>
-                <button type="submit">Entrar</button>
+                <button type="submit" class="btn btn-primary">Entrar</button>
                 <div id="login-error" class="error"></div>
             </form>
         </section>
@@ -70,13 +70,13 @@
                         <label>Artista (opcional)<input type="text" id="book-artist"></label>
                         <label>Precio Mercado Pago (ARS)<input type="number" id="book-price-ars" required></label>
                         <label>Precio PayPal (USD)<input type="number" id="book-price-usd" step="0.01" required></label>
-                        <label>Tiene contraportada? <input type="checkbox" id="book-has-back"></label>
+                        <label>¿Tiene contraportada? <input type="checkbox" id="book-has-back" style="width:auto;"></label>
                     </div>
                     
                     <label>Descripción<textarea id="book-desc" rows="4" required></textarea></label>
                     <label>Características (papel, encuadernación, etc)<textarea id="book-features" rows="2" required></textarea></label>
                     
-                    <fieldset style="border: 1px solid var(--border); padding: 1rem; margin-top: 1rem; border-radius: 4px;">
+                    <fieldset>
                         <legend>Reseña Destacada (Opcional)</legend>
                         <div class="form-grid">
                             <label>Nombre del reseñador<input type="text" id="book-review-name"></label>
@@ -91,7 +91,7 @@
                         <label>Contraportada (Opcional)<input type="file" id="book-cover-back" accept="image/*"></label>
                     </div>
 
-                    <button type="submit" id="save-book-btn">Guardar Libro</button>
+                    <button type="submit" id="save-book-btn" class="btn btn-primary">Guardar Libro</button>
                     <div id="book-form-msg"></div>
                 </form>
             </div>
