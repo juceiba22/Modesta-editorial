@@ -209,7 +209,7 @@ const app = {
 
             // Route parsing
             if (hash.startsWith('#libro-detalle/')) {
-                const bookId = hash.split('/')[1];
+                const bookId = decodeURIComponent(hash.split('/')[1]);
                 this.renderBookDetail(bookId);
                 document.getElementById('libro-detalle').classList.add('active');
             } else if (hash.startsWith('#checkout/success')) {
@@ -342,7 +342,7 @@ const app = {
                     <div class="book-artist">${book.artist}</div>
                     <div class="price">$${book.price.toLocaleString('es-AR')} ARS</div>
                     <div class="book-card-actions">
-                        <a href="#libro-detalle/${book.id}" class="btn btn-secondary">Ver Reseña</a>
+                        <a href="#libro-detalle/${encodeURIComponent(book.id)}" class="btn btn-secondary">Ver Reseña</a>
                         <button onclick="app.addToCart('${book.id}')" class="btn btn-primary"><i class="fa-solid fa-cart-plus"></i> Comprar</button>
                     </div>
                 </div>
@@ -367,7 +367,7 @@ const app = {
                         </div>
                         <div class="author-meta">
                             <h3>${author.name}</h3>
-                            <a href="#libro-detalle/${author.bookId}" class="author-book-badge">Ver Libro "${author.bookTitle}"</a>
+                            <a href="#libro-detalle/${encodeURIComponent(author.bookId)}" class="author-book-badge">Ver Libro "${author.bookTitle}"</a>
                         </div>
                     </div>
                     <div class="author-bio">
