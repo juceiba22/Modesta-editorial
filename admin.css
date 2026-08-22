@@ -134,7 +134,7 @@ button {
 
 #login-form h2 { margin: 0; text-align: center; font-size: 2.2rem; }
 
-#login-form label, #book-form label {
+#login-form label, #book-form label, #author-form label {
     display: flex;
     flex-direction: column;
     gap: 0.5rem;
@@ -241,7 +241,7 @@ tr:hover {
 .btn-edit:hover { color: var(--color-accent-hover); text-decoration: underline; }
 
 /* Form */
-#book-form { display: flex; flex-direction: column; gap: 1.5rem; }
+#book-form, #author-form { display: flex; flex-direction: column; gap: 1.5rem; }
 .form-grid {
     display: grid;
     grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
@@ -268,7 +268,7 @@ legend {
     padding: 0 0.5rem;
 }
 
-#save-book-btn {
+#save-book-btn, #save-author-btn {
     align-self: flex-start;
     margin-top: 1rem;
 }
