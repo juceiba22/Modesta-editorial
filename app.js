@@ -119,6 +119,7 @@ const app = {
     // 2. INITIALIZATION
     async init() {
         await this.loadBooksFromSupabase();
+        await this.loadAuthorsFromSupabase();
         this.loadCart();
         this.loadUserReviews();
         this.renderCatalog();
@@ -180,6 +181,38 @@ const app = {
         } catch (err) {
             console.error("Error loading books from Supabase:", err);
             // fallback to hardcoded this.books if failed
+        }
+    },
+
+    async loadAuthorsFromSupabase() {
+        try {
+            const res = await fetch(`${this.supabaseUrl}/rest/v1/authors?select=*`, {
+                headers: {
+                    'apikey': this.supabaseAnonKey,
+                    'Authorization': `Bearer ${this.supabaseAnonKey}`
+                }
+            });
+            if (!res.ok) throw new Error('Failed to fetch authors');
+            const data = await res.json();
+            
+            if (data && data.length > 0) {
+                this.authors = {};
+                data.forEach(author => {
+                    this.authors[author.id] = {
+                        id: author.id,
+                        name: author.name,
+                        initials: author.initials,
+                        bookTitle: author.book_title,
+                        bookId: author.book_id,
+                        bio: author.bio,
+                        backCover: author.back_cover,
+                        photoUrl: author.photo_url || null
+                    };
+                });
+            }
+        } catch (err) {
+            console.error("Error loading authors from Supabase:", err);
+            // fallback to hardcoded this.authors if failed
         }
     },
 
@@ -359,11 +392,15 @@ const app = {
 
         let authorsHTML = '';
         Object.values(this.authors).forEach(author => {
+            const avatarContent = author.photoUrl 
+                ? `<img src="${author.photoUrl}" alt="${author.name}" style="width: 100%; height: 100%; object-fit: cover;">`
+                : author.initials;
+                
             authorsHTML += `
                 <div class="author-card">
                     <div class="author-header">
-                        <div class="author-avatar-container" style="background-color: var(--color-bg); display: flex; align-items: center; justify-content: center; font-weight: 700; font-size: 1.5rem; color: var(--color-accent);">
-                            ${author.initials}
+                        <div class="author-avatar-container" style="background-color: var(--color-bg); display: flex; align-items: center; justify-content: center; font-weight: 700; font-size: 1.5rem; color: var(--color-accent); overflow: hidden;">
+                            ${avatarContent}
                         </div>
                         <div class="author-meta">
                             <h3>${author.name}</h3>

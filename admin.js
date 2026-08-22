@@ -15,6 +15,10 @@ const booksTableBody = document.querySelector('#books-table tbody');
 const bookForm = document.getElementById('book-form');
 const bookFormMsg = document.getElementById('book-form-msg');
 
+const authorsTableBody = document.querySelector('#authors-table tbody');
+const authorForm = document.getElementById('author-form');
+const authorFormMsg = document.getElementById('author-form-msg');
+
 // Initialize
 async function init() {
     const { data } = await supabase.auth.getSession();
@@ -35,6 +39,7 @@ function updateView() {
         dashView.classList.add('active');
         logoutBtn.style.display = 'block';
         loadBooks();
+        loadAuthors();
     } else {
         authView.classList.add('active');
         dashView.classList.remove('active');
@@ -82,6 +87,16 @@ function setupEventListeners() {
                 // If they go back to catalog, reset the Add Book tab text
                 const addTabBtn = document.querySelector('.tab-btn[data-target="add-book"]');
                 addTabBtn.textContent = 'Añadir Libro';
+            } else if (btn.dataset.target === 'add-author') {
+                if (btn.textContent === 'Añadir Autor') {
+                    authorForm.reset();
+                    document.getElementById('author-id').removeAttribute('readonly');
+                    document.getElementById('author-id').style.backgroundColor = '';
+                    document.querySelector('#add-author h2').textContent = 'Añadir Autor';
+                }
+            } else if (btn.dataset.target === 'authors-list') {
+                const addAuthorBtn = document.querySelector('.tab-btn[data-target="add-author"]');
+                addAuthorBtn.textContent = 'Añadir Autor';
             }
         });
     });
@@ -166,6 +181,57 @@ function setupEventListeners() {
             bookFormMsg.textContent = 'Error: ' + err.message;
         }
     });
+
+    authorForm.addEventListener('submit', async (e) => {
+        e.preventDefault();
+        authorFormMsg.className = '';
+        authorFormMsg.textContent = 'Guardando autor...';
+        
+        try {
+            const id = document.getElementById('author-id').value;
+            const photoFile = document.getElementById('author-photo').files[0];
+            
+            let photo_url = null;
+
+            if (photoFile) {
+                const ext = photoFile.name.split('.').pop();
+                const path = `${id}_${Date.now()}.${ext}`;
+                const { data, error } = await supabase.storage.from('authors').upload(path, photoFile, { upsert: true });
+                if (error) throw error;
+                photo_url = supabase.storage.from('authors').getPublicUrl(path).data.publicUrl;
+            }
+
+            const authorData = {
+                id,
+                name: document.getElementById('author-name').value,
+                initials: document.getElementById('author-initials').value,
+                book_id: document.getElementById('author-book-id').value,
+                book_title: document.getElementById('author-book-title').value,
+                bio: document.getElementById('author-bio').value,
+                back_cover: document.getElementById('author-back-cover').value
+            };
+
+            if (photo_url) authorData.photo_url = photo_url;
+
+            const { error: dbError } = await supabase.from('authors').upsert(authorData);
+            if (dbError) throw dbError;
+
+            authorFormMsg.className = 'success';
+            authorFormMsg.textContent = 'Autor guardado exitosamente.';
+            authorForm.reset();
+            
+            document.getElementById('author-id').removeAttribute('readonly');
+            document.getElementById('author-id').style.backgroundColor = '';
+            const addAuthorBtn = document.querySelector('.tab-btn[data-target="add-author"]');
+            addAuthorBtn.textContent = 'Añadir Autor';
+            document.querySelector('#add-author h2').textContent = 'Añadir Autor';
+
+            loadAuthors();
+        } catch (err) {
+            authorFormMsg.className = 'error';
+            authorFormMsg.textContent = 'Error: ' + err.message;
+        }
+    });
 }
 
 let currentBooks = [];
@@ -237,6 +303,71 @@ async function loadBooks() {
             document.getElementById('add-book').classList.add('active');
             
             document.querySelector('#add-book h2').textContent = 'Editar Libro';
+        });
+    });
+}
+
+let currentAuthors = [];
+
+async function loadAuthors() {
+    const { data: authors, error } = await supabase.from('authors').select('*').order('created_at', { ascending: false });
+    if (error) {
+        console.error('Error loading authors:', error);
+        return;
+    }
+
+    currentAuthors = authors;
+    authorsTableBody.innerHTML = '';
+    authors.forEach(author => {
+        const tr = document.createElement('tr');
+        tr.innerHTML = `
+            <td>${author.id}</td>
+            <td>${author.name}</td>
+            <td>${author.book_title}</td>
+            <td>${author.photo_url ? '<img src="'+author.photo_url+'" style="height:40px;border-radius:4px;">' : 'No'}</td>
+            <td>
+                <button class="btn-edit-author" data-id="${author.id}">Editar</button>
+                <button class="btn-delete-author" data-id="${author.id}">Eliminar</button>
+            </td>
+        `;
+        authorsTableBody.appendChild(tr);
+    });
+
+    document.querySelectorAll('.btn-delete-author').forEach(btn => {
+        btn.addEventListener('click', async (e) => {
+            if (confirm('¿Seguro que deseas eliminar este autor?')) {
+                const id = e.target.dataset.id;
+                await supabase.from('authors').delete().eq('id', id);
+                loadAuthors();
+            }
+        });
+    });
+
+    document.querySelectorAll('.btn-edit-author').forEach(btn => {
+        btn.addEventListener('click', (e) => {
+            const id = e.target.dataset.id;
+            const author = currentAuthors.find(a => a.id === id);
+            if (!author) return;
+
+            document.getElementById('author-id').value = author.id;
+            document.getElementById('author-id').setAttribute('readonly', true);
+            document.getElementById('author-id').style.backgroundColor = '#eee';
+            
+            document.getElementById('author-name').value = author.name;
+            document.getElementById('author-initials').value = author.initials || '';
+            document.getElementById('author-book-id').value = author.book_id || '';
+            document.getElementById('author-book-title').value = author.book_title || '';
+            document.getElementById('author-bio').value = author.bio || '';
+            document.getElementById('author-back-cover').value = author.back_cover || '';
+
+            tabBtns.forEach(b => b.classList.remove('active'));
+            tabContents.forEach(c => c.classList.remove('active'));
+            const addAuthorBtn = document.querySelector('.tab-btn[data-target="add-author"]');
+            addAuthorBtn.classList.add('active');
+            addAuthorBtn.textContent = 'Editar Autor';
+            document.getElementById('add-author').classList.add('active');
+            
+            document.querySelector('#add-author h2').textContent = 'Editar Autor';
         });
     });
 }

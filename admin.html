@@ -37,6 +37,8 @@
             <nav class="dashboard-nav">
                 <button class="tab-btn active" data-target="books-list">Catálogo de Libros</button>
                 <button class="tab-btn" data-target="add-book">Añadir Libro</button>
+                <button class="tab-btn" data-target="authors-list">Catálogo de Autores</button>
+                <button class="tab-btn" data-target="add-author">Añadir Autor</button>
             </nav>
 
             <div id="books-list" class="tab-content active">
@@ -93,6 +95,49 @@
 
                     <button type="submit" id="save-book-btn" class="btn btn-primary">Guardar Libro</button>
                     <div id="book-form-msg"></div>
+                </form>
+            </div>
+
+            <div id="authors-list" class="tab-content">
+                <h2>Catálogo de Autores</h2>
+                <div class="table-container">
+                    <table id="authors-table">
+                        <thead>
+                            <tr>
+                                <th>ID</th>
+                                <th>Nombre</th>
+                                <th>Libro Asignado</th>
+                                <th>Foto</th>
+                                <th>Acciones</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <!-- Authors injected here -->
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+            <div id="add-author" class="tab-content">
+                <h2>Añadir Autor</h2>
+                <form id="author-form">
+                    <div class="form-grid">
+                        <label>ID (sin espacios, ej: juan-perez)<input type="text" id="author-id" required></label>
+                        <label>Nombre<input type="text" id="author-name" required></label>
+                        <label>Iniciales (ej: JP)<input type="text" id="author-initials" required></label>
+                        <label>Libro Asociado (ID, ej: posturas)<input type="text" id="author-book-id" required></label>
+                        <label>Título del Libro (ej: Posturas)<input type="text" id="author-book-title" required></label>
+                    </div>
+                    
+                    <label>Biografía<textarea id="author-bio" rows="4" required></textarea></label>
+                    <label>Texto Contratapa (Cita)<textarea id="author-back-cover" rows="3" required></textarea></label>
+
+                    <div class="file-uploads">
+                        <label>Foto de Perfil (Opcional)<input type="file" id="author-photo" accept="image/*"></label>
+                    </div>
+
+                    <button type="submit" id="save-author-btn" class="btn btn-primary">Guardar Autor</button>
+                    <div id="author-form-msg"></div>
                 </form>
             </div>
         </section>
